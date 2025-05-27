@@ -15,7 +15,7 @@ const menuItems = [
   {
     icons: <IoHomeOutline size={30} />,
     label: 'Home',
-    path:'/'
+    path: '/'
   },
   {
     icons: <FaMapMarkedAlt size={30} />,
@@ -56,9 +56,10 @@ export default function Sidebar() {
                 <li key={index} className='px-3 py-2 my-2 hover:bg-purple-400 rounded-md duration-300 cursor-pointer flex gap-2 items-center relative group'>
                   <div>{item.icons}</div>
                   <p className={`${!open && 'w-0 translate-x-24'} duration-500 overflow-hidden`}>{item.label}</p>
-                  <p className={`${open && 'hidden'} absolute left-32 shadow-md rounded-md
-                 w-0 p-0 text-black bg-white duration-100 overflow-hidden group-hover:w-fit group-hover:p-2 group-hover:left-16
-                `}>{item.label}</p>
+                  <p className={`${open && 'hidden'} absolute left-32 top-1 z-50 shadow-md rounded-md
+w-0 p-0 text-black bg-white duration-100 overflow-hidden whitespace-nowrap group-hover:w-fit group-hover:p-2 group-hover:left-16`}>
+                    {item.label}
+                  </p>
                 </li>
               </Link>
 
