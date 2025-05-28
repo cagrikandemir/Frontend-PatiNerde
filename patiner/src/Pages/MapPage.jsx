@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -19,6 +19,7 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
+// Harita tıklama bileşeni
 const LocationSelector = ({ onLocationSelect }) => {
   useMapEvents({
     click(e) {
@@ -29,6 +30,7 @@ const LocationSelector = ({ onLocationSelect }) => {
   return null;
 };
 
+// Yıldız bileşeni
 const StarRating = ({ rating }) => {
   const totalStars = 5;
   return (
@@ -36,8 +38,7 @@ const StarRating = ({ rating }) => {
       {[...Array(totalStars)].map((_, i) => (
         <svg
           key={i}
-          className={`w-5 h-5 ${i < rating ? "text-yellow-400" : "text-gray-300"
-            }`}
+          className={`w-5 h-5 ${i < rating ? "text-yellow-400" : "text-gray-300"}`}
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -57,26 +58,86 @@ const MapPage = () => {
   const [markers, setMarkers] = useState([]);
   const [viewMarker, setViewMarker] = useState(null);
 
+  // API'den marker'ları çek
+  useEffect(() => {
+    fetch("https://localhost:7068/api/MapMaker/GetAll")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Gelen veriler:", data);
+        if (data.items) {
+          const converted = data.items.map((item) => ({
+            position: { lat: item.enlem, lng: item.boylam },
+            title: item.title,
+            description: item.description,
+            rating: Math.floor(Math.random() * 5) + 1, // geçici
+          }));
+          setMarkers(converted);
+        }
+      })
+      .catch((err) => console.error("API Hatası:", err));
+  }, []);
+
   const handleLocationSelect = (location) => {
     setSelectedLocation(location);
     setModalOpen(true);
   };
 
   const handleSave = () => {
-    const newMarker = {
-      position: selectedLocation,
-      title,
-      description,
-      rating: Math.floor(Math.random() * 5) + 1, // Örnek sabit rating
-    };
+  if (!selectedLocation || !title || !description) {
+    alert("Lütfen tüm alanları doldurun.");
+    return;
+  }
 
-    setMarkers([...markers, newMarker]);
-
-    setModalOpen(false);
-    setTitle("");
-    setDescription("");
-    setSelectedLocation(null);
+  const newMarker = {
+    title: title,
+    description: description,
+    enlem: selectedLocation.lat,
+    boylam: selectedLocation.lng,
+    createByUserId: 1002, // Sabit kullanıcı ID'si
   };
+
+  console.log("API'ye gönderilecek veri:", newMarker);
+
+  fetch("https://localhost:7068/api/MapMaker/Create", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(newMarker),
+  })
+    .then((res) => {
+      if (!res.ok) {
+        return res.text().then((text) => {
+          console.error("API Hatası:", text);
+          throw new Error(text);
+        });
+      }
+      return res.json();
+    })
+    .then((data) => {
+      setMarkers((prev) => [
+        ...prev,
+        {
+          position: {
+            lat: newMarker.enlem,
+            lng: newMarker.boylam,
+          },
+          title: newMarker.title,
+          description: newMarker.description,
+          rating: Math.floor(Math.random() * 5) + 1,
+        },
+      ]);
+      setModalOpen(false);
+      setTitle("");
+      setDescription("");
+      setSelectedLocation(null);
+    })
+    .catch((err) => {
+      console.error("POST sırasında hata:", err);
+      alert("Veri kaydedilirken bir hata oluştu.");
+    });
+};
+
 
   const handleMarkerClick = (marker) => {
     setViewMarker(marker);
@@ -104,9 +165,7 @@ const MapPage = () => {
             attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-
           <LocationSelector onLocationSelect={handleLocationSelect} />
-
           {markers.map((marker, index) => (
             <Marker
               key={index}
@@ -121,8 +180,8 @@ const MapPage = () => {
 
       {/* Konum Ekle Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-[9999] bg-black bg-opacity-40 flex items-center justify-center transition-opacity duration-500">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg z-[10000] transition-all duration-500 transform scale-100">
+        <div className="fixed inset-0 z-[9999] bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg z-[10000]">
             <h2 className="text-xl font-semibold mb-4">Konum Bilgisi</h2>
 
             <label className="block text-sm mb-1 font-medium">Başlık</label>
@@ -163,12 +222,11 @@ const MapPage = () => {
 
       {/* Marker Detay Modal */}
       {viewModalOpen && viewMarker && (
-        <div className="fixed inset-0 z-[9999] bg-black bg-opacity-40 flex items-center justify-center transition-opacity duration-500">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg z-[10000] transition-all duration-500 transform scale-100">
+        <div className="fixed inset-0 z-[9999] bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg z-[10000]">
             <h2 className="text-xl font-semibold mb-2">{viewMarker.title}</h2>
             <p className="text-gray-600 mb-4">{viewMarker.description}</p>
             <StarRating rating={viewMarker.rating} />
-
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setViewModalOpen(false)}
